@@ -237,3 +237,27 @@ class TestSubTask(TestCase):
 
         subtask.sort_order = 2
         subtask.save()
+
+    def test_reorder(self):
+        tasks = [Task.objects.create(sort_order=1) for _ in range(3)]
+
+        self.assertQuerysetEqual(Task.objects.values_list('sort_order', flat=True), ['1', '2', '3'])
+        self.assertQuerysetEqual(Task.objects.all(), [repr(task) for task in reversed(tasks)])
+
+    def test_reorder_unique_together(self):
+        task = Task.objects.create()
+        sub_tasks = [SubTask.objects.create(task=task, sort_order=1) for _ in range(3)]
+
+        self.assertQuerysetEqual(SubTask.objects.values_list('sort_order', flat=True), ['1', '2', '3'])
+        self.assertQuerysetEqual(SubTask.objects.all(), [repr(task) for task in reversed(sub_tasks)])
+
+    def test_reorder_multiple_unique_together(self):
+        task = Task.objects.create()
+        sub_tasks_1 = [SubTask.objects.create(task=task, sort_order=1) for _ in range(3)]
+        task_other = Task.objects.create()
+        sub_tasks_2 = [SubTask.objects.create(task=task_other, sort_order=1) for _ in range(3)]
+
+        sub_tasks = [x for t in zip(sub_tasks_1, sub_tasks_2) for x in t]
+
+        self.assertQuerysetEqual(SubTask.objects.values_list('sort_order', flat=True), ['1', '1', '2', '2', '3', '3'])
+        self.assertQuerysetEqual(SubTask.objects.all(), [repr(task) for task in reversed(sub_tasks)])
